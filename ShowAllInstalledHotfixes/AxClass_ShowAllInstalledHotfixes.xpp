@@ -1,0 +1,63 @@
+﻿public static class ShowAllInstalledHotfixes
+{        
+    public static void main(Args _args)
+    {      
+        var environment = Microsoft.Dynamics.ApplicationPlatform.Environment.EnvironmentFactory::GetApplicationEnvironment();
+
+        Microsoft.Dynamics.AX.Metadata.Providers.IMetadataProvider metadataProvider = ShowAllInstalledHotfixes::getDiskMetadataProvider(environment);
+
+        // or runtime
+        // Microsoft.Dynamics.AX.Metadata.Providers.IMetadataProvider metadataProvider = ShowAllInstalledHotfixes::getRuntimeMetadataProvider(environment);
+
+        Microsoft.Dynamics.AX.Metadata.Providers.IMetaUpdateProvider updateProvider = metadataProvider.get_Updates();
+
+        var moduleInfoList = metadataProvider.ModelManifest.ListModules();
+        var i = moduleInfoList.GetEnumerator();
+
+        setPrefix('KBs Installed');
+
+        while (i.MoveNext())
+        {
+            Microsoft.Dynamics.AX.Metadata.MetaModel.IModuleInfo moduleInfo = i.get_Current();
+            System.String moduleName = moduleInfo.get_Name();
+
+            setPrefix(moduleName);
+
+            var updatesEnumerator = updateProvider.ListObjects(moduleName).GetEnumerator();;
+            while (updatesEnumerator.moveNext())
+            {
+                System.String axUpdateName = updatesEnumerator.get_Current();
+                Microsoft.Dynamics.AX.Metadata.MetaModel.AxUpdate axUpdateObject = updateProvider.Read(axUpdateName);
+
+                utcdatetime appliedDateTime = axUpdateObject.get_AppliedDateTime();
+                setPrefix(strFmt('Name %1, Applied %2', axUpdateObject.get_Name(), appliedDateTime));
+                var n = axUpdateObject.get_KBNumbers().GetEnumerator();
+                while (n.MoveNext())
+                {
+                    info(n.get_Current());
+                }
+            }
+        }
+    }
+
+    public static Microsoft.Dynamics.AX.Metadata.Providers.IMetadataProvider getDiskMetadataProvider(Microsoft.Dynamics.ApplicationPlatform.Environment.IApplicationEnvironment _environment)
+    {
+        Microsoft.Dynamics.AX.Metadata.Storage.DiskProvider.DiskProviderConfiguration diskProviderConfiguration = new Microsoft.Dynamics.AX.Metadata.Storage.DiskProvider.DiskProviderConfiguration();
+
+        diskProviderConfiguration.AddMetadataPath(_environment.get_Aos().get_PackageDirectory());
+
+        Microsoft.Dynamics.AX.Metadata.Storage.MetadataProviderFactory metadataProvicerFactory = new Microsoft.Dynamics.AX.Metadata.Storage.MetadataProviderFactory();
+
+        return metadataProvicerFactory.CreateDiskProvider(diskProviderConfiguration);
+    }
+
+    public static Microsoft.Dynamics.AX.Metadata.Providers.IMetadataProvider getRunTimeMetadataProvider(Microsoft.Dynamics.ApplicationPlatform.Environment.IApplicationEnvironment _environment)
+    {
+        Microsoft.Dynamics.AX.Metadata.Storage.Runtime.RuntimeProviderConfiguration runtimeProviderConfiguration = new Microsoft.Dynamics.AX.Metadata.Storage.Runtime.RuntimeProviderConfiguration(_environment.get_Aos().get_PackageDirectory());
+
+        Microsoft.Dynamics.AX.Metadata.Storage.MetadataProviderFactory metadataProvicerFactory = new Microsoft.Dynamics.AX.Metadata.Storage.MetadataProviderFactory();
+
+        return metadataProvicerFactory.CreateRuntimeProvider(runtimeProviderConfiguration);
+    }
+
+}
